@@ -32,12 +32,15 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
   
-  // Stripe webhook MUST be registered BEFORE body parsers
-  app.use("/api", express.raw({ type: "application/json" }), webhookRouter);
-  
+  // Stripe webhook MUST use raw body parser (registered BEFORE JSON parser)
+  app.use("/api/stripe/webhook", express.raw({ type: "application/json" }));
+
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+  // Register webhook routes AFTER raw middleware for webhook endpoint
+  app.use("/api", webhookRouter);
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   // tRPC API
