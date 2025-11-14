@@ -196,7 +196,17 @@ export default function Menu() {
                 {menuItems
                   .filter((item) => item.categoryId === category.id)
                   .map((item) => (
-                    <Card key={item.id} className="hover:shadow-md transition-shadow">
+                    <Card key={item.id} className="hover:shadow-md transition-shadow overflow-hidden">
+                      {item.imageUrl && (
+                        <div className="aspect-video w-full overflow-hidden bg-muted">
+                          <img
+                            src={item.imageUrl}
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        </div>
+                      )}
                       <CardHeader>
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
