@@ -1,11 +1,10 @@
-import { eq } from "drizzle-orm";
+import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, categories, menuItems, orders, orderItems, InsertCategory, InsertMenuItem, InsertOrder, InsertOrderItem } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
@@ -89,4 +88,153 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+// Category helpers
+export async function getAllCategories() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(categories).orderBy(categories.displayOrder);
+}
+
+export async function insertCategory(category: InsertCategory) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(categories).values(category);
+  return result;
+}
+
+// Menu item helpers
+export async function getAllMenuItems() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(menuItems).orderBy(menuItems.categoryId, menuItems.displayOrder);
+}
+
+export async function getMenuItemsByCategory(categoryId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(menuItems).where(eq(menuItems.categoryId, categoryId)).orderBy(menuItems.displayOrder);
+}
+
+export async function getAvailableMenuItems() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(menuItems).where(eq(menuItems.available, true)).orderBy(menuItems.categoryId, menuItems.displayOrder);
+}
+
+export async function insertMenuItem(item: InsertMenuItem) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(menuItems).values(item);
+  return result;
+}
+
+// Order helpers
+export async function createOrder(order: InsertOrder) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(orders).values(order);
+  return result[0].insertId;
+}
+
+export async function getOrderById(orderId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateOrderStatus(orderId: number, status: string, paidAt?: Date) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const updateData: any = { status };
+  if (paidAt) {
+    updateData.paidAt = paidAt;
+  }
+  return db.update(orders).set(updateData).where(eq(orders.id, orderId));
+}
+
+export async function updateOrderStripeInfo(orderId: number, stripeCheckoutSessionId: string, stripePaymentIntentId?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const updateData: any = { stripeCheckoutSessionId };
+  if (stripePaymentIntentId) {
+    updateData.stripePaymentIntentId = stripePaymentIntentId;
+  }
+  return db.update(orders).set(updateData).where(eq(orders.id, orderId));
+}
+
+export async function getAllOrders() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(orders).orderBy(desc(orders.createdAt));
+}
+
+export async function getOrdersByDateRange(startDate: Date, endDate: Date) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(orders)
+    .where(and(gte(orders.createdAt, startDate), lte(orders.createdAt, endDate)))
+    .orderBy(desc(orders.createdAt));
+}
+
+export async function getOrdersByStatus(status: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(orders).where(sql`${orders.status} = ${status}`).orderBy(desc(orders.createdAt));
+}
+
+// Order item helpers
+export async function createOrderItem(item: InsertOrderItem) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(orderItems).values(item);
+}
+
+export async function getOrderItemsByOrderId(orderId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(orderItems).where(eq(orderItems.orderId, orderId));
+}
+
+// Analytics helpers
+export async function getDailySales(date: Date) {
+  const db = await getDb();
+  if (!db) return { totalSales: 0, orderCount: 0 };
+  
+  const startOfDay = new Date(date);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(date);
+  endOfDay.setHours(23, 59, 59, 999);
+  
+  const result = await db.select({
+    totalSales: sql<number>`COALESCE(SUM(${orders.totalAmountYen}), 0)`,
+    orderCount: sql<number>`COUNT(*)`,
+  }).from(orders)
+    .where(and(
+      gte(orders.createdAt, startOfDay),
+      lte(orders.createdAt, endOfDay),
+      sql`${orders.status} = 'paid'`
+    ));
+  
+  return result[0] || { totalSales: 0, orderCount: 0 };
+}
+
+export async function getMonthlySales(year: number, month: number) {
+  const db = await getDb();
+  if (!db) return { totalSales: 0, orderCount: 0 };
+  
+  const startOfMonth = new Date(year, month - 1, 1);
+  const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+  
+  const result = await db.select({
+    totalSales: sql<number>`COALESCE(SUM(${orders.totalAmountYen}), 0)`,
+    orderCount: sql<number>`COUNT(*)`,
+  }).from(orders)
+    .where(and(
+      gte(orders.createdAt, startOfMonth),
+      lte(orders.createdAt, endOfMonth),
+      sql`${orders.status} = 'paid'`
+    ));
+  
+  return result[0] || { totalSales: 0, orderCount: 0 };
+}

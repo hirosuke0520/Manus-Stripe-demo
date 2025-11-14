@@ -1,33 +1,62 @@
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useState } from "react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
-import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
-import { Streamdown } from 'streamdown';
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { APP_TITLE } from "@/const";
+import { UtensilsCrossed } from "lucide-react";
 
-/**
- * All content in this page are only for example, replace with your own feature implementation
- * When building pages, remember your instructions in Frontend Workflow, Frontend Best Practices, Design Guide and Common Pitfalls
- */
 export default function Home() {
-  // The userAuth hooks provides authentication state
-  // To implement login/logout functionality, simply call logout() or redirect to getLoginUrl()
-  let { user, loading, error, isAuthenticated, logout } = useAuth();
+  const [, setLocation] = useLocation();
+  const [tableNumber, setTableNumber] = useState("");
 
-  // If theme is switchable in App.tsx, we can implement theme toggling like this:
-  // const { theme, toggleTheme } = useTheme();
-
-  // Use APP_LOGO (as image src) and APP_TITLE if needed
+  const handleStart = () => {
+    if (tableNumber.trim()) {
+      setLocation(`/menu?table=${encodeURIComponent(tableNumber)}`);
+    }
+  };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <main>
-        {/* Example: lucide-react for icons */}
-        <Loader2 className="animate-spin" />
-        Example Page
-        {/* Example: Streamdown for markdown rendering */}
-        <Streamdown>Any **markdown** content</Streamdown>
-        <Button variant="default">Example Button</Button>
-      </main>
+    <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white flex items-center justify-center p-4">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="text-center space-y-4">
+          <div className="mx-auto w-16 h-16 bg-primary rounded-full flex items-center justify-center">
+            <UtensilsCrossed className="w-8 h-8 text-primary-foreground" />
+          </div>
+          <CardTitle className="text-2xl font-bold">{APP_TITLE}</CardTitle>
+          <CardDescription className="text-base">
+            テーブル番号を入力してご注文を開始してください
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="tableNumber" className="text-sm font-medium">
+              テーブル番号
+            </label>
+            <Input
+              id="tableNumber"
+              type="text"
+              placeholder="例: 5"
+              value={tableNumber}
+              onChange={(e) => setTableNumber(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleStart();
+                }
+              }}
+              className="text-lg text-center"
+            />
+          </div>
+          <Button
+            onClick={handleStart}
+            disabled={!tableNumber.trim()}
+            className="w-full text-lg py-6"
+            size="lg"
+          >
+            メニューを見る
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
