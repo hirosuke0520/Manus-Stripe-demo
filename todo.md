@@ -42,3 +42,7 @@
 
 ## Bug Fixes
 - [x] Fix checkout page validation error (invalid input: expected object, received undefined)
+
+## Form Validation
+- [ ] Make customer information fields required if needed by Stripe
+- [ ] Add proper form validation on checkout page

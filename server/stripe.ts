@@ -24,7 +24,7 @@ export async function createCheckoutSession({
   customerName?: string;
   origin: string;
 }) {
-  const session = await stripe.checkout.sessions.create({
+  const sessionConfig: Stripe.Checkout.SessionCreateParams = {
     payment_method_types: ["card"],
     line_items: [
       {
@@ -43,14 +43,20 @@ export async function createCheckoutSession({
     success_url: `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}&order_id=${orderId}`,
     cancel_url: `${origin}/payment-cancelled?order_id=${orderId}`,
     client_reference_id: orderId.toString(),
-    customer_email: customerEmail,
     metadata: {
       order_id: orderId.toString(),
       table_number: tableNumber,
       customer_name: customerName || "",
     },
     allow_promotion_codes: true,
-  });
+  };
+
+  // Only add customer_email if it's provided and not empty
+  if (customerEmail && customerEmail.trim() !== "") {
+    sessionConfig.customer_email = customerEmail;
+  }
+
+  const session = await stripe.checkout.sessions.create(sessionConfig);
 
   return session;
 }
