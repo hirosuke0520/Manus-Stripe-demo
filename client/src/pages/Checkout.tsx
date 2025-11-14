@@ -68,9 +68,9 @@ export default function Checkout() {
         menuItemId: item.menuItemId,
         quantity: item.quantity,
       })),
-      customerName: customerName || undefined,
-      customerEmail: customerEmail || undefined,
-      notes: notes || undefined,
+      ...(customerName && { customerName }),
+      ...(customerEmail && { customerEmail }),
+      ...(notes && { notes }),
     });
   };
 

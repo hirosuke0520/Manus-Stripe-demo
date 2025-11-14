@@ -39,3 +39,6 @@
 - [x] Add Unsplash images to all 51 menu items
 - [x] Update database with image URLs
 - [x] Test image display on menu page
+
+## Bug Fixes
+- [x] Fix checkout page validation error (invalid input: expected object, received undefined)

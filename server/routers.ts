@@ -89,7 +89,7 @@ export const appRouter = router({
           quantity: z.number().min(1),
         })),
         customerName: z.string().optional(),
-        customerEmail: z.string().email().optional(),
+        customerEmail: z.string().email().optional().or(z.literal('')),
         notes: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
